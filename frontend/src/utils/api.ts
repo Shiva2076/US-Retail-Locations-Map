@@ -1,4 +1,5 @@
 import type { StateCount, ClusterFeature, Store, ViewportBounds, Filters } from '../types';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
 
 function buildParams(obj: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams();
@@ -15,7 +16,7 @@ export async function fetchStateCounts(filters: Partial<Filters>): Promise<State
     brand: filters.brand,
     status: filters.status,
   });
-  const res = await fetch(`/api/stores/state-counts${qs ? `?${qs}` : ''}`);
+  const res = await fetch(`${API_BASE}/api/stores/state-counts${qs ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error(res.statusText);
   return res.json() as Promise<StateCount[]>;
 }
@@ -35,7 +36,7 @@ export async function fetchClusters(
     brand: filters.brand,
     status: filters.status,
   });
-  const res = await fetch(`/api/stores/clusters?${qs}`);
+  const res = await fetch(`${API_BASE}/api/stores/clusters?${qs}`);
   if (!res.ok) throw new Error(res.statusText);
   return res.json() as Promise<ClusterFeature[]>;
 }
@@ -53,7 +54,7 @@ export async function fetchStores(
     brand: filters.brand,
     status: filters.status,
   });
-  const res = await fetch(`/api/stores/street?${qs}`);
+  const res = await fetch(`${API_BASE}/api/stores/street?${qs}`);
   if (!res.ok) throw new Error(res.statusText);
   return res.json() as Promise<Store[]>;
 }
