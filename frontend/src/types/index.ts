@@ -49,6 +49,7 @@ export interface ClusterFeature {
     cluster: boolean;
     cluster_id?: number;
     point_count?: number;
+    expansion_zoom?: number;
     storeId?: string;
     brand_initial?: string;
     state?: string;

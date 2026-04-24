@@ -10,17 +10,18 @@ interface StatsBarProps {
   loading: boolean;
 }
 
-function dot(color: string) {
+function StatusDot({ color }: { color: string }) {
   return (
     <span
       style={{
         display: 'inline-block',
-        width: '8px',
-        height: '8px',
+        width: '7px',
+        height: '7px',
         borderRadius: '50%',
         backgroundColor: color,
         marginRight: '4px',
         verticalAlign: 'middle',
+        flexShrink: 0,
       }}
     />
   );
@@ -31,11 +32,10 @@ export default function StatsBar({ tier, stateCounts, clusters, stores, loading 
     if (tier === 'country') {
       const total = stateCounts.reduce((s, c) => s + c.count, 0);
       const stateCount = stateCounts.length;
-      return { total, label: `across ${stateCount} states`, breakdown: null };
+      return { total, label: `across ${stateCount} state${stateCount !== 1 ? 's' : ''}`, breakdown: null };
     }
 
     if (tier === 'regional') {
-      // Sum all point_counts (clusters) + 1 per unclustered point
       const total = clusters.reduce(
         (s, c) => s + (c.properties.cluster ? (c.properties.point_count ?? 0) : 1),
         0
@@ -43,7 +43,7 @@ export default function StatsBar({ tier, stateCounts, clusters, stores, loading 
       return { total, label: 'in current view', breakdown: null };
     }
 
-    // Street level — full status breakdown
+    // Street — full status breakdown
     const total = stores.length;
     const breakdown = stores.reduce<Record<string, number>>((acc, s) => {
       const key = s.status || 'Unknown';
@@ -56,50 +56,59 @@ export default function StatsBar({ tier, stateCounts, clusters, stores, loading 
 
   if (loading && stats.total === 0) return null;
 
+  const STATUS_COLORS: Record<string, string> = {
+    Active:  'var(--color-success)',
+    Closed:  'var(--color-danger)',
+    Planned: 'var(--color-warning)',
+    Unknown: 'var(--color-unknown)',
+  };
+
   return (
     <div
+      className={loading ? 'stats-shimmer' : ''}
       style={{
         position: 'absolute',
-        bottom: '24px',
+        bottom: '28px',
         left: '50%',
         transform: 'translateX(-50%)',
-        background: 'rgba(26,26,46,0.92)',
-        color: 'white',
-        padding: '8px 20px',
-        borderRadius: '24px',
+        background: loading ? 'var(--color-surface)' : 'var(--color-surface)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        border: '1px solid var(--color-border)',
+        color: 'var(--color-text-primary)',
+        padding: '9px 22px',
+        borderRadius: 'var(--radius-full)',
         fontSize: '12px',
+        fontFamily: 'Inter, sans-serif',
         fontWeight: '500',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: '14px',
         zIndex: 5,
         pointerEvents: 'none',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-        backdropFilter: 'blur(4px)',
+        boxShadow: 'var(--shadow-soft)',
         whiteSpace: 'nowrap',
-        opacity: loading ? 0.6 : 1,
-        transition: 'opacity 0.2s',
+        opacity: loading ? 0.65 : 1,
+        transition: 'opacity 0.25s ease',
       }}
     >
       <span>
-        <strong style={{ fontSize: '14px' }}>{formatCount(stats.total)}</strong>{' '}
-        <span style={{ opacity: 0.75 }}>{stats.label}</span>
+        <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>
+          {formatCount(stats.total)}
+        </strong>{' '}
+        <span style={{ color: 'var(--color-text-muted)' }}>{stats.label}</span>
       </span>
 
       {stats.breakdown && Object.keys(stats.breakdown).length > 0 && (
         <>
-          <span style={{ opacity: 0.3 }}>|</span>
-          {stats.breakdown['Active'] !== undefined && (
-            <span>{dot('#4CAF50')}{stats.breakdown['Active']} Active</span>
-          )}
-          {stats.breakdown['Closed'] !== undefined && (
-            <span>{dot('#F44336')}{stats.breakdown['Closed']} Closed</span>
-          )}
-          {stats.breakdown['Planned'] !== undefined && (
-            <span>{dot('#FF9800')}{stats.breakdown['Planned']} Planned</span>
-          )}
-          {stats.breakdown['Unknown'] !== undefined && (
-            <span>{dot('#9E9E9E')}{stats.breakdown['Unknown']} Unknown</span>
+          <span style={{ opacity: 0.2, fontSize: '16px' }}>|</span>
+          {(['Active', 'Closed', 'Planned', 'Unknown'] as const).map((status) =>
+            stats.breakdown![status] != null ? (
+              <span key={status} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <StatusDot color={STATUS_COLORS[status]} />
+                {stats.breakdown![status]} {status}
+              </span>
+            ) : null
           )}
         </>
       )}

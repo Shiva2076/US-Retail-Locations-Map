@@ -1,4 +1,5 @@
 import type { StateCount, ClusterFeature, Store, ViewportBounds, Filters } from '../types';
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
 
 function buildParams(obj: Record<string, string | number | undefined>): string {
@@ -57,4 +58,19 @@ export async function fetchStores(
   const res = await fetch(`${API_BASE}/api/stores/street?${qs}`);
   if (!res.ok) throw new Error(res.statusText);
   return res.json() as Promise<Store[]>;
+}
+
+export interface CityResult {
+  city: string;
+  state: string;
+  lat: number;
+  lng: number;
+}
+
+export async function fetchCitySearch(q: string): Promise<CityResult[]> {
+  if (!q || q.trim().length < 2) return [];
+  const qs = buildParams({ q: q.trim() });
+  const res = await fetch(`${API_BASE}/api/stores/search?${qs}`);
+  if (!res.ok) throw new Error(res.statusText);
+  return res.json() as Promise<CityResult[]>;
 }

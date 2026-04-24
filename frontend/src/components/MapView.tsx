@@ -7,6 +7,7 @@ import {
 } from '@vis.gl/react-google-maps';
 import { Filters, ViewportBounds } from '../types';
 import { useMapData } from '../hooks/useMapData';
+import { CityResult } from '../utils/api';
 import StateMarkers from './StateMarkers';
 import ClusterMarkers from './ClusterMarkers';
 import StoreMarkers from './StoreMarkers';
@@ -15,7 +16,7 @@ import LoadingOverlay from './LoadingOverlay';
 import StatsBar from './StatsBar';
 import ErrorBanner from './ErrorBanner';
 
-// Read initial filter values from URL query params so links are shareable
+// ── URL persistence ──────────────────────────────────────────
 function readFiltersFromUrl(): Partial<Filters> {
   const p = new URLSearchParams(window.location.search);
   const f: Partial<Filters> = {};
@@ -25,7 +26,6 @@ function readFiltersFromUrl(): Partial<Filters> {
   return f;
 }
 
-// Sync filters into URL without triggering a navigation
 function writeFiltersToUrl(filters: Partial<Filters>) {
   const p = new URLSearchParams();
   if (filters.state) p.set('state', filters.state);
@@ -35,44 +35,73 @@ function writeFiltersToUrl(filters: Partial<Filters>) {
   window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
 }
 
+// ── Reset View ───────────────────────────────────────────────
 function ResetViewButton() {
   const map = useMap();
   return (
     <button
+      className="reset-btn"
       onClick={() => {
         if (!map) return;
         map.panTo({ lat: 39.5, lng: -98.35 });
         map.setZoom(4);
       }}
       title="Reset to full US view"
-      style={{
-        position: 'absolute',
-        bottom: '80px',
-        right: '10px',
-        background: 'rgba(26,26,46,0.92)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        padding: '8px 14px',
-        fontSize: '12px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        zIndex: 5,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-        letterSpacing: '0.3px',
-      }}
+      id="reset-view-btn"
     >
       ↺ Reset View
     </button>
   );
 }
 
-const TIER_LABEL: Record<string, string> = {
-  country: '🗺 Country',
-  regional: '🔍 Regional',
-  street: '📍 Street',
+// ── Interactive Tier Legend ──────────────────────────────────
+const TIER_META: Record<string, { label: string; color: string }> = {
+  country:  { label: '🗺 Country',  color: '#6c63ff' },
+  regional: { label: '🔍 Regional', color: '#3949ab' },
+  street:   { label: '📍 Street',   color: '#00897b' },
 };
 
+const TIER_THRESHOLDS = [
+  { tier: 'country',  range: 'zoom < 5',    desc: 'State-level counts' },
+  { tier: 'regional', range: 'zoom 5–12',   desc: 'Clustered groups' },
+  { tier: 'street',   range: 'zoom ≥ 13',   desc: 'Individual stores' },
+];
+
+function TierLegend({ tier }: { tier: string }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const meta = TIER_META[tier] ?? TIER_META.country;
+
+  return (
+    <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 5 }}>
+      <button
+        className="tier-badge"
+        onClick={() => setShowTooltip((v) => !v)}
+        onBlur={() => setShowTooltip(false)}
+        style={{ borderColor: `${meta.color}66` }}
+        id="tier-legend-badge"
+        title="Click to see zoom tier info"
+      >
+        {meta.label}
+      </button>
+
+      {showTooltip && (
+        <div className="tier-tooltip">
+          {TIER_THRESHOLDS.map(({ tier: t, range, desc }) => (
+            <div key={t} className={`tier-tooltip-row ${t === tier ? 'active-tier' : ''}`}>
+              <span style={{ minWidth: '80px', fontWeight: t === tier ? '700' : '400' }}>
+                {TIER_META[t].label}
+              </span>
+              <span style={{ minWidth: '72px', opacity: 0.7 }}>{range}</span>
+              <span style={{ opacity: 0.7 }}>{desc}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Map Content (inside APIProvider so useMap() works) ───────
 function MapContent({
   filters,
   setFilters,
@@ -80,6 +109,7 @@ function MapContent({
   filters: Partial<Filters>;
   setFilters: (f: Partial<Filters>) => void;
 }) {
+  const map = useMap();
   const [zoom, setZoom] = useState(4);
   const [bounds, setBounds] = useState<ViewportBounds | null>(null);
 
@@ -108,6 +138,13 @@ function MapContent({
     });
   }, []);
 
+  // Pan map to city search result
+  const handleCitySelect = useCallback((result: CityResult) => {
+    if (!map) return;
+    map.panTo({ lat: result.lat, lng: result.lng });
+    map.setZoom(11);
+  }, [map]);
+
   return (
     <>
       <Map
@@ -125,10 +162,9 @@ function MapContent({
         <ResetViewButton />
       </Map>
 
-      <FilterSidebar filters={filters} onChange={setFilters} />
+      <FilterSidebar filters={filters} onChange={setFilters} onCitySelect={handleCitySelect} />
 
       {loading && <LoadingOverlay />}
-
       {error && <ErrorBanner message={error} onRetry={retry} />}
 
       {isEmpty && !error && (
@@ -138,12 +174,13 @@ function MapContent({
             bottom: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(255,255,255,0.95)',
-            padding: '8px 18px',
-            borderRadius: '20px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+            background: 'var(--color-surface)',
+            backdropFilter: 'blur(12px)',
+            padding: '8px 20px',
+            borderRadius: '999px',
+            border: '1px solid var(--color-border)',
             fontSize: '13px',
-            color: '#555',
+            color: 'var(--color-text-muted)',
             fontWeight: '500',
             zIndex: 5,
             pointerEvents: 'none',
@@ -161,34 +198,15 @@ function MapContent({
         loading={loading}
       />
 
-      {/* Tier indicator badge */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: 'rgba(26,26,46,0.90)',
-          color: 'white',
-          padding: '6px 14px',
-          borderRadius: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-          fontSize: '11px',
-          fontWeight: 'bold',
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          zIndex: 5,
-        }}
-      >
-        {TIER_LABEL[tier] ?? tier}
-      </div>
+      <TierLegend tier={tier} />
     </>
   );
 }
 
+// ── Root ─────────────────────────────────────────────────────
 export default function MapView() {
   const [filters, setFilters] = useState<Partial<Filters>>(readFiltersFromUrl);
 
-  // Keep URL in sync whenever filters change
   useEffect(() => {
     writeFiltersToUrl(filters);
   }, [filters]);

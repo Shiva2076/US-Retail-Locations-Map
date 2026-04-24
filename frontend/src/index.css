@@ -1,17 +1,256 @@
-* {
+/* ============================================================
+   US Retail Locations — Global Design System
+   ============================================================ */
+
+/* ── Google Font ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── Design tokens ── */
+:root {
+  --color-bg-dark:        #0f0f1a;
+  --color-surface:        rgba(15, 15, 26, 0.88);
+  --color-surface-light:  rgba(255, 255, 255, 0.07);
+  --color-border:         rgba(255, 255, 255, 0.12);
+  --color-accent:         #6c63ff;
+  --color-accent-glow:    rgba(108, 99, 255, 0.35);
+  --color-text-primary:   #f0f0f8;
+  --color-text-muted:     rgba(240, 240, 248, 0.55);
+  --color-success:        #4caf7d;
+  --color-danger:         #f44361;
+  --color-warning:        #ffb74d;
+  --color-unknown:        #78909c;
+
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-full: 9999px;
+
+  --shadow-soft:  0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-glow:  0 0 0 3px var(--color-accent-glow);
+  --shadow-card:  0 8px 32px rgba(0, 0, 0, 0.5);
+
+  --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Reset ── */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-base);
+  background: var(--color-bg-dark);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Marker entrance animation — applied to all AdvancedMarker children */
+/* ── Glassmorphism panel ── */
+.glass-panel {
+  background: var(--color-surface);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border-right: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+/* ── Filter sidebar slide transition ── */
+.sidebar-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 240px;
+  z-index: 10;
+  transform: translateX(0);
+  transition: transform var(--transition);
+  will-change: transform;
+}
+
+.sidebar-wrap.collapsed {
+  transform: translateX(-240px);
+}
+
+/* ── Collapse tab (always rendered, slides into view when sidebar hides) ── */
+.sidebar-tab {
+  position: absolute;
+  top: 50%;
+  left: 240px;
+  transform: translateY(-50%);
+  background: var(--color-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-left: none;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 16px 7px;
+  cursor: pointer;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  box-shadow: 3px 0 12px rgba(0, 0, 0, 0.3);
+  transition: background var(--transition), box-shadow var(--transition);
+  white-space: nowrap;
+}
+
+.sidebar-tab:hover {
+  background: rgba(108, 99, 255, 0.25);
+  box-shadow: 3px 0 16px rgba(108, 99, 255, 0.3);
+}
+
+/* ── Sidebar inner content ── */
+.sidebar-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* ── Form controls ── */
+.filter-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 5px;
+}
+
+.filter-select,
+.search-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-family: var(--font-base);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.filter-select:focus,
+.search-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.filter-select option {
+  background: #1a1a2e;
+  color: var(--color-text-primary);
+}
+
+.search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ── Search suggestions dropdown ── */
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1a1a2e;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: var(--shadow-card);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.search-suggestion-item {
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--transition);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.search-suggestion-item:hover {
+  background: var(--color-surface-light);
+}
+
+.search-suggestion-state {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+/* ── Clear filters button ── */
+.clear-btn {
+  width: 100%;
+  padding: 9px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-base);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clear-btn:not(:disabled):hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: rgba(244, 67, 97, 0.08);
+}
+
+.clear-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Active filter dot ── */
+.active-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  margin-left: 7px;
+  vertical-align: middle;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Marker entrance spring animation ── */
 @keyframes markerEnter {
   from {
-    transform: scale(0.4) translateY(8px);
+    transform: scale(0.3) translateY(10px);
     opacity: 0;
   }
   to {
@@ -21,12 +260,121 @@ body {
 }
 
 .marker-enter {
-  animation: markerEnter 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: markerEnter 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Cluster pulse ring on hover */
-@keyframes pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(26,26,46,0.4); }
-  70%  { box-shadow: 0 0 0 10px rgba(26,26,46,0); }
-  100% { box-shadow: 0 0 0 0 rgba(26,26,46,0); }
+/* ── Cluster hover pulse ── */
+@keyframes clusterPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(108, 99, 255, 0.5); }
+  70%  { box-shadow: 0 0 0 10px rgba(108, 99, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(108, 99, 255, 0); }
+}
+
+.cluster-pulse:hover {
+  animation: clusterPulse 0.7s ease-out;
+}
+
+/* ── Stats bar shimmer (loading state) ── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.stats-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.03) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.03) 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* ── Tier legend badge ── */
+.tier-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  background: var(--color-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.tier-badge:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ── Tier legend tooltip ── */
+.tier-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #1a1a2e;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  z-index: 20;
+  animation: markerEnter 0.15s ease-out forwards;
+}
+
+.tier-tooltip-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+  color: var(--color-text-muted);
+}
+
+.tier-tooltip-row:last-child { margin-bottom: 0; }
+
+.tier-tooltip-row .active-tier {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* ── Reset view button ── */
+.reset-btn {
+  position: absolute;
+  bottom: 84px;
+  right: 12px;
+  background: var(--color-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-family: var(--font-base);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  z-index: 5;
+  box-shadow: var(--shadow-soft);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  text-transform: uppercase;
+}
+
+.reset-btn:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
 }

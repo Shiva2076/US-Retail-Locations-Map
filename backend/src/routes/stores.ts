@@ -81,6 +81,8 @@ router.get('/state-counts', async (req: Request, res: Response) => {
 });
 
 // GET /api/stores/clusters
+// Returns Supercluster GeoJSON features, each cluster has an `expansion_zoom` property
+// so the frontend can zoom to precisely the right level to break that cluster apart.
 router.get('/clusters', async (req: Request, res: Response) => {
   try {
     const { swLat, swLng, neLat, neLng, zoom, state, brand, status } = req.query;
@@ -113,7 +115,7 @@ router.get('/clusters', async (req: Request, res: Response) => {
     const query = { ...geoFilter, ...extraFilter };
 
     const points = await Store.find(query)
-      .limit(5000)
+      .limit(8000)
       .select('location brand_initial state city status type storeId')
       .lean<PointLean[]>();
 
@@ -140,9 +142,37 @@ router.get('/clusters', async (req: Request, res: Response) => {
     const sc = new Supercluster<PointProps>({ radius: 80, maxZoom: 16, minZoom: 0 });
     sc.load(features);
 
-    const clusters = sc.getClusters([swLngNum, swLatNum, neLngNum, neLatNum], Math.floor(zoomNum));
+    const floorZoom = Math.floor(zoomNum);
+    const clusters = sc.getClusters([swLngNum, swLatNum, neLngNum, neLatNum], floorZoom);
 
-    res.json(clusters);
+    // Annotate each cluster with the exact zoom needed to expand it.
+    // getClusterExpansionZoom returns the minimum zoom at which the cluster splits —
+    // this is far more accurate than a fixed +2 offset.
+    const annotated = clusters.map((f) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const props = f.properties as any;
+      if (props.cluster && props.cluster_id != null) {
+        try {
+          const expansionZoom = sc.getClusterExpansionZoom(props.cluster_id as number);
+          return {
+            ...f,
+            properties: {
+              ...f.properties,
+              expansion_zoom: Math.min(expansionZoom + 1, 16),
+            },
+          };
+        } catch {
+          // cluster_id not found — safe fallback
+          return {
+            ...f,
+            properties: { ...f.properties, expansion_zoom: Math.min(floorZoom + 2, 16) },
+          };
+        }
+      }
+      return f;
+    });
+
+    res.json(annotated);
   } catch (err) {
     console.error('/clusters error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -201,6 +231,47 @@ router.get('/street', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     console.error('/street error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/stores/search?q=seattle
+// Returns up to 8 unique city suggestions matching the query (case-insensitive prefix).
+// Each result has { city, state, lat, lng } so the frontend can pan the map.
+router.get('/search', async (req: Request, res: Response) => {
+  try {
+    const q = (req.query.q as string | undefined)?.trim();
+    if (!q || q.length < 2) {
+      res.json([]);
+      return;
+    }
+
+    // Case-insensitive prefix match on city field
+    const regex = new RegExp(`^${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+
+    const matches = await Store.aggregate([
+      { $match: { city: regex } },
+      {
+        $group: {
+          _id: { city: '$city', state: '$state' },
+          lat: { $first: { $arrayElemAt: ['$location.coordinates', 1] } },
+          lng: { $first: { $arrayElemAt: ['$location.coordinates', 0] } },
+        },
+      },
+      { $sort: { '_id.city': 1 } },
+      { $limit: 8 },
+    ]);
+
+    const results = matches.map((m: { _id: { city: string; state: string }; lat: number; lng: number }) => ({
+      city: m._id.city,
+      state: m._id.state,
+      lat: m.lat,
+      lng: m.lng,
+    }));
+
+    res.json(results);
+  } catch (err) {
+    console.error('/search error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
