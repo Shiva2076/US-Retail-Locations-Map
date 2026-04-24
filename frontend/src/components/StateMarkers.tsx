@@ -37,6 +37,7 @@ export default function StateMarkers({ stateCounts }: StateMarkersProps) {
               cursor: 'pointer',
               boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
               userSelect: 'none',
+              animation: 'markerEnter 0.2s cubic-bezier(0.34,1.56,0.64,1) forwards',
             }}
           >
             <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1a1a2e', lineHeight: 1 }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ViewportBounds,
   Filters,
@@ -17,6 +17,8 @@ interface MapDataResult {
   stores: Store[];
   loading: boolean;
   tier: ZoomTier;
+  error: string | null;
+  retry: () => void;
 }
 
 export function useMapData(
@@ -28,8 +30,11 @@ export function useMapData(
   const [clusters, setClusters] = useState<ClusterFeature[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Stringify bounds to a rounded key to avoid refetching on tiny sub-pixel pans
+  const retry = useCallback(() => setRetryCount((c) => c + 1), []);
+
   const boundsStr = bounds
     ? `${bounds.swLat.toFixed(2)},${bounds.swLng.toFixed(2)},${bounds.neLat.toFixed(2)},${bounds.neLng.toFixed(2)}`
     : '';
@@ -43,16 +48,15 @@ export function useMapData(
   const tier = getZoomTier(debouncedZoom);
   const cache = useRef(new Map<string, unknown>());
 
-  // Clear stale data from the previous tier immediately on tier change
-  // so old markers don't linger while the new fetch is in-flight.
+  // Clear stale markers immediately when tier changes to prevent visual ghosting
   useEffect(() => {
     setStateCounts([]);
     setClusters([]);
     setStores([]);
+    setError(null);
   }, [tier]);
 
   useEffect(() => {
-    // Country tier doesn't need bounds; other tiers do
     if (tier !== 'country' && !debouncedBoundsStr) return;
 
     const cacheKey = `${tier}|${debouncedBoundsStr}|${debouncedZoom}|${debouncedBrand}|${debouncedStatus}|${debouncedState}`;
@@ -62,18 +66,14 @@ export function useMapData(
       if (tier === 'country') setStateCounts(cached as StateCount[]);
       else if (tier === 'regional') setClusters(cached as ClusterFeature[]);
       else setStores(cached as Store[]);
+      setError(null);
       return;
     }
 
     const parsedBounds: ViewportBounds | null = debouncedBoundsStr
       ? (() => {
           const parts = debouncedBoundsStr.split(',').map(Number);
-          return {
-            swLat: parts[0],
-            swLng: parts[1],
-            neLat: parts[2],
-            neLng: parts[3],
-          };
+          return { swLat: parts[0], swLng: parts[1], neLat: parts[2], neLng: parts[3] };
         })()
       : null;
 
@@ -85,40 +85,33 @@ export function useMapData(
 
     let cancelled = false;
     setLoading(true);
+    setError(null);
 
     const doFetch = async () => {
       try {
         if (tier === 'country') {
           const data = await fetchStateCounts(activeFilters);
-          if (!cancelled) {
-            setStateCounts(data);
-            cache.current.set(cacheKey, data);
-          }
+          if (!cancelled) { setStateCounts(data); cache.current.set(cacheKey, data); }
         } else if (tier === 'regional' && parsedBounds) {
           const data = await fetchClusters(parsedBounds, debouncedZoom, activeFilters);
-          if (!cancelled) {
-            setClusters(data);
-            cache.current.set(cacheKey, data);
-          }
+          if (!cancelled) { setClusters(data); cache.current.set(cacheKey, data); }
         } else if (tier === 'street' && parsedBounds) {
           const data = await fetchStores(parsedBounds, activeFilters);
-          if (!cancelled) {
-            setStores(data);
-            cache.current.set(cacheKey, data);
-          }
+          if (!cancelled) { setStores(data); cache.current.set(cacheKey, data); }
         }
       } catch (err) {
-        if (!cancelled) console.error('Map data fetch failed:', err);
+        if (!cancelled) {
+          setError('Failed to load map data. Check your connection and try again.');
+          console.error('Map data fetch failed:', err);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
     doFetch();
-    return () => {
-      cancelled = true;
-    };
-  }, [tier, debouncedBoundsStr, debouncedZoom, debouncedBrand, debouncedStatus, debouncedState]);
+    return () => { cancelled = true; };
+  }, [tier, debouncedBoundsStr, debouncedZoom, debouncedBrand, debouncedStatus, debouncedState, retryCount]);
 
-  return { stateCounts, clusters, stores, loading, tier };
+  return { stateCounts, clusters, stores, loading, tier, error, retry };
 }
