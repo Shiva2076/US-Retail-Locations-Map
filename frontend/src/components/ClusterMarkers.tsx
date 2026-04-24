@@ -17,8 +17,8 @@ export default function ClusterMarkers({ clusters }: ClusterMarkersProps) {
 
         if (cluster) {
           const count = point_count ?? 0;
-          // Scale from 40px (small clusters) to 80px (large clusters)
-          const size = Math.min(80, Math.max(40, 40 + Math.log2(count + 1) * 7));
+          const size = Math.min(72, Math.max(40, 40 + Math.log2(count + 1) * 6));
+          const fontSize = size > 58 ? '14px' : '12px';
 
           return (
             <AdvancedMarker
@@ -36,16 +36,16 @@ export default function ClusterMarkers({ clusters }: ClusterMarkersProps) {
                   width: `${size}px`,
                   height: `${size}px`,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #1565C0 0%, #42A5F5 100%)',
+                  backgroundColor: '#1a1a2e',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
                   fontWeight: 'bold',
-                  fontSize: size > 60 ? '14px' : '12px',
+                  fontSize,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-                  border: '2px solid rgba(255,255,255,0.6)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
+                  border: '2px solid rgba(255,255,255,0.25)',
                   userSelect: 'none',
                 }}
               >
@@ -55,22 +55,39 @@ export default function ClusterMarkers({ clusters }: ClusterMarkersProps) {
           );
         }
 
+        // Unclustered individual point at regional zoom —
+        // white ring style matching street-level markers, clicks zoom to street level
+        const color = getBrandColor(brand_initial ?? '');
         return (
           <AdvancedMarker
             key={`point-${feature.properties.storeId ?? index}`}
             position={{ lat, lng }}
+            onClick={() => {
+              if (!map) return;
+              map.panTo({ lat, lng });
+              map.setZoom(14);
+            }}
           >
             <div
               style={{
-                width: '12px',
-                height: '12px',
+                width: '28px',
+                height: '28px',
                 borderRadius: '50%',
-                backgroundColor: getBrandColor(brand_initial ?? ''),
-                border: '1.5px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                backgroundColor: 'white',
+                border: `2.5px solid ${color}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: color,
+                fontWeight: 'bold',
+                fontSize: '11px',
                 cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                userSelect: 'none',
               }}
-            />
+            >
+              {(brand_initial ?? '?')}
+            </div>
           </AdvancedMarker>
         );
       })}

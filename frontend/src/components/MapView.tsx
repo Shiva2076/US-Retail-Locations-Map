@@ -13,9 +13,9 @@ import FilterSidebar from './FilterSidebar';
 import LoadingOverlay from './LoadingOverlay';
 
 const TIER_COLORS: Record<string, string> = {
-  country: '#2E7D32',
-  regional: '#1565C0',
-  street: '#6A1B9A',
+  country: '#1a1a2e',
+  regional: '#1a1a2e',
+  street: '#1a1a2e',
 };
 
 export default function MapView() {

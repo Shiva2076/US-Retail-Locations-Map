@@ -1,4 +1,5 @@
-import React from 'react';
+import { useState } from 'react';
+import type React from 'react';
 import { Filters } from '../types';
 
 const US_STATES = [
@@ -43,107 +44,157 @@ interface FilterSidebarProps {
 }
 
 export default function FilterSidebar({ filters, onChange }: FilterSidebarProps) {
+  const [open, setOpen] = useState(true);
+
+  const hasActiveFilters = !!(filters.state || filters.brand || filters.status);
+
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '220px',
-        height: '100%',
-        background: 'rgba(255, 255, 255, 0.93)',
-        boxShadow: '2px 0 10px rgba(0,0,0,0.15)',
-        padding: '16px 14px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
-        zIndex: 10,
-        overflowY: 'auto',
-      }}
-    >
-      <h3
-        style={{
-          margin: 0,
-          fontSize: '15px',
-          fontWeight: 'bold',
-          color: '#1565C0',
-          letterSpacing: '0.3px',
-        }}
-      >
-        Filters
-      </h3>
-
-      <div>
-        <label style={labelStyle}>State</label>
-        <select
-          value={filters.state ?? ''}
-          onChange={(e) =>
-            onChange({ ...filters, state: e.target.value || undefined })
-          }
-          style={selectStyle}
-        >
-          <option value="">All States</option>
-          {US_STATES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label style={labelStyle}>Brand</label>
-        <select
-          value={filters.brand ?? ''}
-          onChange={(e) =>
-            onChange({ ...filters, brand: e.target.value || undefined })
-          }
-          style={selectStyle}
-        >
-          <option value="">All Brands</option>
-          {BRANDS.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label style={labelStyle}>Status</label>
-        <select
-          value={filters.status ?? ''}
-          onChange={(e) =>
-            onChange({ ...filters, status: e.target.value || undefined })
-          }
-          style={selectStyle}
-        >
-          <option value="">All</option>
-          <option value="Active">Active</option>
-          <option value="Closed">Closed</option>
-          <option value="Planned">Planned</option>
-        </select>
-      </div>
-
-      <div style={{ marginTop: 'auto' }}>
+    <>
+      {/* Collapsed toggle tab */}
+      {!open && (
         <button
-          onClick={() => onChange({})}
+          onClick={() => setOpen(true)}
           style={{
-            width: '100%',
-            padding: '8px',
-            background: '#1565C0',
+            position: 'absolute',
+            top: '50%',
+            left: 0,
+            transform: 'translateY(-50%)',
+            background: '#1a1a2e',
             color: 'white',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '0 6px 6px 0',
+            padding: '14px 6px',
             cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            letterSpacing: '0.3px',
+            zIndex: 10,
+            fontSize: '11px',
+            fontWeight: 'bold',
+            writingMode: 'vertical-rl',
+            textOrientation: 'mixed',
+            letterSpacing: '1px',
+            boxShadow: '2px 0 8px rgba(0,0,0,0.2)',
           }}
         >
-          Clear Filters
+          {hasActiveFilters ? '● FILTER' : '▶ FILTER'}
         </button>
-      </div>
-    </div>
+      )}
+
+      {/* Expanded panel */}
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '220px',
+            height: '100%',
+            background: 'rgba(255, 255, 255, 0.95)',
+            boxShadow: '2px 0 10px rgba(0,0,0,0.15)',
+            padding: '16px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            zIndex: 10,
+            overflowY: 'auto',
+          }}
+        >
+          {/* Header with collapse button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#1a1a2e' }}>
+              Filters
+              {hasActiveFilters && (
+                <span
+                  style={{
+                    marginLeft: '6px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#E53935',
+                    display: 'inline-block',
+                  }}
+                />
+              )}
+            </h3>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '16px',
+                color: '#888',
+                padding: '2px 6px',
+                lineHeight: 1,
+              }}
+              title="Collapse filters"
+            >
+              ◀
+            </button>
+          </div>
+
+          <div>
+            <label style={labelStyle}>State</label>
+            <select
+              value={filters.state ?? ''}
+              onChange={(e) => onChange({ ...filters, state: e.target.value || undefined })}
+              style={selectStyle}
+            >
+              <option value="">All States</option>
+              {US_STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Brand</label>
+            <select
+              value={filters.brand ?? ''}
+              onChange={(e) => onChange({ ...filters, brand: e.target.value || undefined })}
+              style={selectStyle}
+            >
+              <option value="">All Brands</option>
+              {BRANDS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Status</label>
+            <select
+              value={filters.status ?? ''}
+              onChange={(e) => onChange({ ...filters, status: e.target.value || undefined })}
+              style={selectStyle}
+            >
+              <option value="">All</option>
+              <option value="Active">Active</option>
+              <option value="Closed">Closed</option>
+              <option value="Planned">Planned</option>
+            </select>
+          </div>
+
+          <div style={{ marginTop: 'auto' }}>
+            <button
+              onClick={() => onChange({})}
+              style={{
+                width: '100%',
+                padding: '8px',
+                background: '#1a1a2e',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600',
+                opacity: hasActiveFilters ? 1 : 0.5,
+              }}
+              disabled={!hasActiveFilters}
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
